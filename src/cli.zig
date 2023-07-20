@@ -224,7 +224,11 @@ fn emptiable(comptime T: type) fn (Parser(ArrayList(T))) Parser(ArrayList(T)) {
 }
 
 fn spaceParser(str: []const u8) ?Result(ArrayList(u8)) {
-    return emptiable(u8)(all(u8)(genCharParser(' ')))(str);
+    const cp = genCharParser;
+    const orc = Or(u8, u8, u8);
+    const p = orc(orc(orc(cp(' '), cp('\r')), cp('\n')), cp('\t'));
+
+    return emptiable(u8)(all(u8)(p))(str);
 }
 
 fn genRightSpaceParser(comptime T: type) fn (p: Parser(T)) Parser(T) {
@@ -428,7 +432,7 @@ test "Object Parser" {
         std.debug.print("null\n", .{});
     }
 
-    const r2 = JobjectParser("{112: true, \"key\": [false], \"obj\": {}}");
+    const r2 = JobjectParser("{112: true, \n\"key\": [false], \n\"obj\": {}}");
     if (r2) |r| {
         std.debug.print("\nresult: [{s}]\nremain:[{s}]\n", .{ r.result, r.remain });
     } else {
