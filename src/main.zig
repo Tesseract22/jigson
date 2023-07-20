@@ -124,7 +124,7 @@ fn right(comptime T1: type, comptime T2: type) Composer(T1, T2, T2) {
 }
 
 
-pub fn nullParser(str: []const u8) ?Result(JsonType) {
+pub fn JNullParser(str: []const u8) ?Result(JsonType) {
     if (str.len < 4) return null;
     if (std.mem.eql(u8, str[0..4], "null")) {
         return Result(JsonType) { .result = JsonType{ .JsonNull = {} }, .remain = str[4..] };
@@ -388,37 +388,7 @@ fn JstringParser(str: []const u8) ?Result(JsonType) {
     return null;
 }
 
-// fn genSpanParser(comptime T: type, ps: ArrayList(Parser(T))) Parser(ArrayList(T)) {
-//     return struct {
-//         pub fn f(str: []const u8) ?Result(ArrayList(T)) {
-//             var li = ArrayList(T).init(allocator);
-//             var s = str;
-//             for (ps, 0..) |item, i| {
-//                 _ = i;
-//                 const res = item(s);
-//                 if (res) |r| {
-//                     s = r.remain;
-//                     li.append(r.result);
-//                 } else {
-//                     break;
-//                 }
-//             }
-//             if (li.len == 0) {
-//                 return null;
-//             }
-//             return Result(ArrayList(T)) { .result = li, .remain = s};
-     
-//         }
-//     }.f;
-// }
-
-// fn genStringParser(comptime str: []const u8) Parser([]const u8) {
-//     var ps = ArrayList(u8).init(allocator);
-//     ps.appendSlice(str) catch unreachable;
-//     return genSpanParser(u8, ps);
-// }
-
-const JsonParser = genLeftSpaceParser(JsonType)(orj(orj(orj(orj(JboolParser, orj(JFloatParser, JIntParser)), JarrayParser), JstringParser), JobjectParser));
+const JsonParser = genLeftSpaceParser(JsonType)(orj(orj(orj(orj(orj(JboolParser, orj(JFloatParser, JIntParser)), JarrayParser), JstringParser), JobjectParser, JNullParser)));
 
 pub fn main() !void {
     const args = try process.argsAlloc(allocator);
