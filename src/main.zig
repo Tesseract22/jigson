@@ -24,33 +24,65 @@ const JsonType = union(enum) {
         options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
+        const w: u64 = options.width orelse 0;
+        const opt = std.fmt.FormatOptions {
+            .width = w + 2,
+        };
+        const pad = struct {
+            pub fn f(wr: anytype, ww: u64) !void {
+                for (0..ww) |i| {
+                    _ = i;
+                    try wr.print(" ", .{});
+                }
+            }
+        }.f;
         switch (self) {
-            .JsonBool => |val| try writer.print("JBool({})", .{val}),
-            .JsonFloat => |val| try writer.print("JFloat({})", .{val}),
-            .JsonInt => |val| try writer.print("JInt({})", .{val}),
+            .JsonBool => |val|  {
+                try pad(writer, w); 
+                try writer.print("JBool({})", .{val});
+            },
+            .JsonFloat => |val| {
+                try pad(writer, w); 
+                try writer.print("JFloat({})", .{val});
+            },
+            .JsonInt => |val| {
+                try pad(writer, w); 
+                try writer.print("JInt({})", .{val});
+            },
             .JsonNull => |val| {
+                try pad(writer, w); 
                 try writer.print("JNull", .{});
                 _ = val;
             },
             .JsonArray => |val| {
-                try writer.print("JArray([", .{});
+                try pad(writer, w); 
+                try writer.print("JArray([\n", .{});
                 for (val.items, 0..) |j, i| {
-                    try j.format(fmt, options, writer);
-                    if (i < val.items.len - 1) try writer.print(", ", .{});
+                    try j.format(fmt, opt, writer);
+                    if (i < val.items.len - 1) try writer.print(",", .{});
+                    try writer.print("\n", .{});
                 }
+                try pad(writer, w); 
                 try writer.print("])", .{});
             },
             .JsonObject => |val| {
-                try writer.print("JObject({{", .{});
+                const opt2 = std.fmt.FormatOptions {.width = w + 4};
+                try pad(writer, w); 
+                try writer.print("JObject({{\n", .{});
                 for (val.items, 0..) |j, i| {
-                    try j.first.format(fmt, options, writer);
-                    try writer.print(": ", .{});
-                    try j.second.format(fmt, options, writer);
-                    if (i < val.items.len - 1) try writer.print(", ", .{});
+                    try j.first.format(fmt, opt, writer);
+                    try writer.print(":\n", .{});
+                    try j.second.format(fmt, opt2, writer);
+                    if (i < val.items.len - 1) try writer.print(",", .{});
+                    try writer.print("\n", .{});
                 }
+                try pad(writer, w); 
                 try writer.print("}})", .{});
             },
-            .JsonString => |val| try writer.print("JString({s})", .{val.items}),
+            .JsonString => |val| {
+                try pad(writer, w); 
+                try writer.print("JString({s:.2})", .{val.items});
+            },
         }
         try writer.writeAll("");
     }
@@ -388,7 +420,7 @@ fn JstringParser(str: []const u8) ?Result(JsonType) {
     return null;
 }
 
-const JsonParser = genLeftSpaceParser(JsonType)(orj(orj(orj(orj(orj(JboolParser, orj(JFloatParser, JIntParser)), JarrayParser), JstringParser), JobjectParser, JNullParser)));
+const JsonParser = genLeftSpaceParser(JsonType)(orj(orj(orj(orj(orj(JboolParser, orj(JFloatParser, JIntParser)), JarrayParser), JstringParser), JobjectParser), JNullParser));
 
 pub fn main() !void {
     const args = try process.argsAlloc(allocator);
@@ -407,7 +439,7 @@ pub fn main() !void {
 
     const r1 = JsonParser(&buff);
     if (r1) |r| {
-        std.debug.print("\nresult: {s}\n", .{ r.result, r.remain });
+        std.debug.print("\n{s}\n", .{ r.result});
     } else {
         std.debug.print("null\n", .{});
     }
