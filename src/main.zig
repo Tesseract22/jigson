@@ -8,7 +8,7 @@ const allocator = fba.allocator();
 const ArrayList = std.ArrayList;
 
 pub fn Pair(comptime T1: type, comptime T2: type) type {
-    return struct {first: T1, second: T2};
+    return struct { first: T1, second: T2 };
 }
 const JsonType = union(enum) {
     JsonBool: bool,
@@ -18,6 +18,7 @@ const JsonType = union(enum) {
     JsonArray: ArrayList(JsonType),
     JsonString: ArrayList(u8),
     JsonObject: ArrayList(Pair(JsonType, JsonType)),
+
     pub fn format(
         self: JsonType,
         comptime fmt: []const u8,
@@ -25,7 +26,7 @@ const JsonType = union(enum) {
         writer: anytype,
     ) !void {
         const w: u64 = options.width orelse 0;
-        const opt = std.fmt.FormatOptions {
+        const opt = std.fmt.FormatOptions{
             .width = w + 2,
         };
         const pad = struct {
@@ -37,37 +38,37 @@ const JsonType = union(enum) {
             }
         }.f;
         switch (self) {
-            .JsonBool => |val|  {
-                try pad(writer, w); 
+            .JsonBool => |val| {
+                try pad(writer, w);
                 try writer.print("JBool({})", .{val});
             },
             .JsonFloat => |val| {
-                try pad(writer, w); 
+                try pad(writer, w);
                 try writer.print("JFloat({})", .{val});
             },
             .JsonInt => |val| {
-                try pad(writer, w); 
+                try pad(writer, w);
                 try writer.print("JInt({})", .{val});
             },
             .JsonNull => |val| {
-                try pad(writer, w); 
+                try pad(writer, w);
                 try writer.print("JNull", .{});
                 _ = val;
             },
             .JsonArray => |val| {
-                try pad(writer, w); 
+                try pad(writer, w);
                 try writer.print("JArray([\n", .{});
                 for (val.items, 0..) |j, i| {
                     try j.format(fmt, opt, writer);
                     if (i < val.items.len - 1) try writer.print(",", .{});
                     try writer.print("\n", .{});
                 }
-                try pad(writer, w); 
+                try pad(writer, w);
                 try writer.print("])", .{});
             },
             .JsonObject => |val| {
-                const opt2 = std.fmt.FormatOptions {.width = w + 4};
-                try pad(writer, w); 
+                const opt2 = std.fmt.FormatOptions{ .width = w + 4 };
+                try pad(writer, w);
                 try writer.print("JObject({{\n", .{});
                 for (val.items, 0..) |j, i| {
                     try j.first.format(fmt, opt, writer);
@@ -76,17 +77,16 @@ const JsonType = union(enum) {
                     if (i < val.items.len - 1) try writer.print(",", .{});
                     try writer.print("\n", .{});
                 }
-                try pad(writer, w); 
+                try pad(writer, w);
                 try writer.print("}})", .{});
             },
             .JsonString => |val| {
-                try pad(writer, w); 
+                try pad(writer, w);
                 try writer.print("JString({s:.2})", .{val.items});
             },
         }
         try writer.writeAll("");
     }
-
 };
 
 fn Result(comptime T: type) type {
@@ -95,8 +95,6 @@ fn Result(comptime T: type) type {
         remain: []const u8 = "",
     };
 }
-
-
 
 fn Parser(comptime T: type) type {
     return fn (str: []const u8) ?Result(T);
@@ -119,7 +117,6 @@ fn Or(comptime T1: type, comptime T2: type, comptime R: type) Composer(T1, T2, R
     }.f;
 }
 
-
 fn left(comptime T1: type, comptime T2: type) Composer(T1, T2, T1) {
     return struct {
         pub fn f(comptime a: Parser(T1), comptime b: Parser(T2)) Parser(T1) {
@@ -127,16 +124,14 @@ fn left(comptime T1: type, comptime T2: type) Composer(T1, T2, T1) {
                 pub fn r(str: []const u8) ?Result(T1) {
                     if (a(str)) |res1| {
                         if (b(res1.remain)) |res2| {
-                            return Result(T1) { .result = res1.result, .remain = res2.remain };
+                            return Result(T1){ .result = res1.result, .remain = res2.remain };
                         }
                     }
                     return null;
                 }
             }.r;
         }
-
     }.f;
-
 }
 fn right(comptime T1: type, comptime T2: type) Composer(T1, T2, T2) {
     return struct {
@@ -150,16 +145,13 @@ fn right(comptime T1: type, comptime T2: type) Composer(T1, T2, T2) {
                 }
             }.r;
         }
-
     }.f;
-
 }
-
 
 pub fn JNullParser(str: []const u8) ?Result(JsonType) {
     if (str.len < 4) return null;
     if (std.mem.eql(u8, str[0..4], "null")) {
-        return Result(JsonType) { .result = JsonType{ .JsonNull = {} }, .remain = str[4..] };
+        return Result(JsonType){ .result = JsonType{ .JsonNull = {} }, .remain = str[4..] };
     }
     return null;
 }
@@ -169,20 +161,19 @@ const orj = Or(JsonType, JsonType, JsonType);
 pub fn JtrueParser(str: []const u8) ?Result(JsonType) {
     if (str.len < 4) return null;
     if (std.mem.eql(u8, str[0..4], "true")) {
-        return Result(JsonType) { .result = JsonType { .JsonBool = true}, .remain = str[4..] };
+        return Result(JsonType){ .result = JsonType{ .JsonBool = true }, .remain = str[4..] };
     }
     return null;
 }
 pub fn JfalseParser(str: []const u8) ?Result(JsonType) {
     if (str.len < 5) return null;
     if (std.mem.eql(u8, str[0..5], "false")) {
-        return Result(JsonType) { .result = JsonType { .JsonBool = false }, .remain = str[5..] };
+        return Result(JsonType){ .result = JsonType{ .JsonBool = false }, .remain = str[5..] };
     }
     return null;
 }
 
 const JboolParser = orj(JfalseParser, JtrueParser);
-
 
 fn posIntParser(str: []const u8) ?Result(i64) {
     const isInt = struct {
@@ -199,7 +190,7 @@ fn posIntParser(str: []const u8) ?Result(i64) {
     }
     if (i == 0) return null;
     const num = std.fmt.parseInt(i64, str[0..i], 10) catch unreachable;
-    return Result(i64) { .result = num, .remain = str[i..] };
+    return Result(i64){ .result = num, .remain = str[i..] };
 }
 
 fn negIntParser(str: []const u8) ?Result(i64) {
@@ -211,8 +202,8 @@ fn negIntParser(str: []const u8) ?Result(i64) {
 }
 fn posFloatParser(str: []const u8) ?Result(f64) {
     const isFloat = struct {
-        var i: u8 = 0;
         pub fn f(c: u8) bool {
+            var i: u8 = 0;
             if (c == '.') {
                 i += 1;
                 return i <= 1;
@@ -229,7 +220,7 @@ fn posFloatParser(str: []const u8) ?Result(f64) {
     }
     if (i == 0) return null;
     const num = std.fmt.parseFloat(f64, str[0..i]) catch unreachable;
-    return Result(f64) { .result = num, .remain = str[i..] };
+    return Result(f64){ .result = num, .remain = str[i..] };
 }
 
 fn negFloatParser(str: []const u8) ?Result(f64) {
@@ -242,7 +233,7 @@ fn negFloatParser(str: []const u8) ?Result(f64) {
 fn JFloatParser(str: []const u8) ?Result(JsonType) {
     const res = Or(f64, f64, f64)(negFloatParser, posFloatParser)(str);
     if (res) |r| {
-        return Result(JsonType) {.result= JsonType {.JsonFloat = r.result}, .remain = r.remain};
+        return Result(JsonType){ .result = JsonType{ .JsonFloat = r.result }, .remain = r.remain };
     }
     return null;
 }
@@ -250,7 +241,7 @@ fn JFloatParser(str: []const u8) ?Result(JsonType) {
 fn JIntParser(str: []const u8) ?Result(JsonType) {
     const res = Or(i64, i64, i64)(negIntParser, posIntParser)(str);
     if (res) |r| {
-        return Result(JsonType) {.result= JsonType {.JsonInt = r.result}, .remain = r.remain};
+        return Result(JsonType){ .result = JsonType{ .JsonInt = r.result }, .remain = r.remain };
     }
     return null;
 }
@@ -270,7 +261,7 @@ fn sepBy(comptime elT: type, comptime sepT: type) Composer(elT, sepT, ArrayList(
                             s = re.remain;
                             res = right(sepT, elT)(genRightSpaceParser(sepT)(sepp), elp_space)(s);
                         }
-                        return Result(ArrayList(elT)) {.result = li, .remain = s};
+                        return Result(ArrayList(elT)){ .result = li, .remain = s };
                     }
                     return null;
                 }
@@ -287,7 +278,7 @@ fn emptiable(comptime T: type) fn (Parser(ArrayList(T))) Parser(ArrayList(T)) {
                     if (p(str)) |res| {
                         return res;
                     }
-                    return Result(ArrayList(T)) {.result = ArrayList(T).init(allocator), .remain = str};
+                    return Result(ArrayList(T)){ .result = ArrayList(T).init(allocator), .remain = str };
                 }
             }.r;
         }
@@ -319,13 +310,13 @@ fn genLeftSpaceParser(comptime T: type) fn (p: Parser(T)) Parser(T) {
 }
 
 fn JarrayParser(str: []const u8) ?Result(JsonType) {
-    const sep = sepBy(JsonType, u8)(JsonParser,genCharParser(','));
+    const sep = sepBy(JsonType, u8)(JsonParser, genCharParser(','));
     const left_brac = genRightSpaceParser(u8)(genCharParser('['));
     const right_brac = genRightSpaceParser(u8)(genCharParser(']'));
     const arr = right(u8, ArrayList(JsonType))(left_brac, left(ArrayList(JsonType), u8)(emptiable(JsonType)(sep), right_brac));
     const res = arr(str);
     if (res) |r| {
-        return Result(JsonType) {.result = JsonType {.JsonArray = r.result}, .remain = r.remain};
+        return Result(JsonType){ .result = JsonType{ .JsonArray = r.result }, .remain = r.remain };
     }
     return null;
 }
@@ -339,9 +330,7 @@ fn kvParser(comptime kp: Parser(JsonType), comptime sp: Parser(u8), comptime vp:
                 if (s_result) |sr| {
                     const v_result = genRightSpaceParser(JsonType)(vp)(sr.remain);
                     if (v_result) |vr| {
-                        return Result(Pair(JsonType, JsonType)) {
-                            .result = Pair(JsonType, JsonType) {.first = kr.result, .second = vr.result}, 
-                            .remain = vr.remain};
+                        return Result(Pair(JsonType, JsonType)){ .result = Pair(JsonType, JsonType){ .first = kr.result, .second = vr.result }, .remain = vr.remain };
                     }
                 }
             }
@@ -354,32 +343,28 @@ fn JobjectParser(str: []const u8) ?Result(JsonType) {
     const JJ = Pair(JsonType, JsonType);
     const left_brac = genRightSpaceParser(u8)(genCharParser('{'));
     const right_brac = genRightSpaceParser(u8)(genCharParser('}'));
-    const kvp = kvParser(JsonParser, genCharParser(':'), JsonParser);
-    const sep = sepBy(Pair(JsonType, JsonType), u8)(kvp , genCharParser(','));
+    const kvp = kvParser(JstringParser, genCharParser(':'), JsonParser);
+    const sep = sepBy(Pair(JsonType, JsonType), u8)(kvp, genCharParser(','));
     const objp = right(u8, ArrayList(JJ))(left_brac, left(ArrayList(JJ), u8)(emptiable(JJ)(sep), right_brac));
     const res = objp(str);
     if (res) |r| {
-        return Result(JsonType) {.result = JsonType {.JsonObject = r.result}, .remain = r.remain};
+        return Result(JsonType){ .result = JsonType{ .JsonObject = r.result }, .remain = r.remain };
     }
     return null;
-
-
 }
-
-
 
 fn genCharParser(comptime char: u8) Parser(u8) {
     return struct {
         const c = char;
         pub fn f(str: []const u8) ?Result(u8) {
             if (str.len == 0) return null;
-            if (str[0] == c) return Result(u8) { .result = c, .remain = str[1..] };
+            if (str[0] == c) return Result(u8){ .result = c, .remain = str[1..] };
             return null;
         }
     }.f;
 }
 
-fn all(comptime T: type) fn (comptime p: Parser(T))  Parser(ArrayList(T)) {
+fn all(comptime T: type) fn (comptime p: Parser(T)) Parser(ArrayList(T)) {
     return struct {
         pub fn f(comptime p: Parser(T)) Parser(ArrayList(T)) {
             return struct {
@@ -393,7 +378,7 @@ fn all(comptime T: type) fn (comptime p: Parser(T))  Parser(ArrayList(T)) {
                         s = re.remain;
                         res = p(s);
                     }
-                    return Result(ArrayList(T)) {.result = li, .remain = s};
+                    return Result(ArrayList(T)){ .result = li, .remain = s };
                 }
             }.r;
         }
@@ -405,7 +390,7 @@ fn stringParser(str: []const u8) ?Result(ArrayList(u8)) {
         pub fn f(str2: []const u8) ?Result(u8) {
             if (str2.len == 0) return null;
             if (str2[0] == '"') return null;
-            return Result(u8) {.result = str2[0], .remain = str2[1..]};
+            return Result(u8){ .result = str2[0], .remain = str2[1..] };
         }
     }.f;
     return all(u8)(cp)(str);
@@ -415,7 +400,7 @@ fn JstringParser(str: []const u8) ?Result(JsonType) {
     const strp = left(ArrayList(u8), u8)(right(u8, ArrayList(u8))(genCharParser('"'), stringParser), genCharParser('"'));
     const res = strp(str);
     if (res) |r| {
-        return Result(JsonType) {.result = JsonType {.JsonString = r.result}, .remain = r.remain};
+        return Result(JsonType){ .result = JsonType{ .JsonString = r.result }, .remain = r.remain };
     }
     return null;
 }
@@ -423,30 +408,30 @@ fn JstringParser(str: []const u8) ?Result(JsonType) {
 const JsonParser = genLeftSpaceParser(JsonType)(orj(orj(orj(orj(orj(JboolParser, orj(JFloatParser, JIntParser)), JarrayParser), JstringParser), JobjectParser), JNullParser));
 
 pub fn main() !void {
+    const stdout = std.io.getStdOut();
+    _ = stdout;
     const args = try process.argsAlloc(allocator);
     if (args.len == 1) {
         std.debug.print("no input file\n", .{});
         return;
     }
-    const file = std.fs.cwd().openFile(args[1], .{}) catch { 
+    const file = std.fs.cwd().openFile(args[1], .{}) catch {
         std.debug.print("file {s} does not exit\n", .{args[1]});
         unreachable;
     };
     defer file.close();
-    var buff: [1024 * 1024]u8 = undefined;
+    var buff: [1024 * 1024 * 10]u8 = undefined;
     const bytes = try file.readAll(&buff);
-    std.debug.print("bytes written {}\n", .{bytes});
+    std.debug.print("bytes read {}\n", .{bytes});
 
     const r1 = JsonParser(&buff);
     if (r1) |r| {
-        std.debug.print("\n{s}\n", .{ r.result});
+        std.debug.print("\n{s}\n", .{r.result});
+
     } else {
         std.debug.print("null\n", .{});
     }
-
-
 }
-
 
 test "Space Parser" {
     const r1 = spaceParser("aaa");
@@ -477,8 +462,6 @@ test "String Parser" {
     } else {
         std.debug.print("null\n", .{});
     }
-
-    
 }
 
 test "Object Parser" {
@@ -504,9 +487,7 @@ test "Array Parser" {
     } else {
         std.debug.print("null\n", .{});
     }
-
 }
-
 
 test "Float Parser" {
     const r1 = JsonParser("-1111223.5");
@@ -515,5 +496,4 @@ test "Float Parser" {
     } else {
         std.debug.print("null\n", .{});
     }
-
 }
