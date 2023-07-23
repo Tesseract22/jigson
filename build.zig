@@ -15,15 +15,16 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary(.{
-        .name = "cli",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = "src/main.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-
+    const lib = b.addSharedLibrary("a", "src/a.zig", version(1,0,0));
+    lib.emit_h = true;
+    // const exe = b.addExecutable(.{
+    //     .name = "test",
+    // });
+    // exe.addIncludePath("/mnt/c/Users/caleb/PersonalCoding/ziglang/zig/lib");
+    // exe.addCSourceFile("test.c", &[_][]const u8{"-std=c99"});
+    // exe.linkLibrary(lib);
+    // exe.linkSystemLibrary("c");
+    // b.installArtifact(exe);
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
