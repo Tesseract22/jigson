@@ -15,8 +15,15 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addSharedLibrary("a", "src/a.zig", version(1,0,0));
-    lib.emit_h = true;
+    const lib = b.addSharedLibrary(.{
+        .root_source_file = .{ .path = "src/json.zig" },
+        .name = "json",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // _ = lib;
+    // lib.emit_h = true;
     // const exe = b.addExecutable(.{
     //     .name = "test",
     // });
@@ -28,6 +35,7 @@ pub fn build(b: *std.Build) void {
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
+    // b.installArtifact(lib);
     b.installArtifact(lib);
 
     // Creates a step for unit testing. This only builds the test executable
