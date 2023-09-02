@@ -1,10 +1,11 @@
 # jigson
 > :warning: ** This project in still in development and API is not stable. Use it at your own risk.
 
-## A JSON parser implemented with zig using [parser combinator][parser combinator], providing C API (thus comptiable with languag comptiable with C)
+## A JSON parser implemented with zig using [parser combinator][parser combinator] with C API
 This is a toy project for myself to experiment with parser combinator and a more or less functional programming style.
 > This is largely inspired by [Tsoding's][tsoding yt] [json parser][tsoding json repo] in `Haskell`
 
+Under the hood, we use zig's `comptime` feature to generate parser combinator with zero runtime cost.
 ## Installation & Build
 `git clone https://github.com/Tesseract22/jigson.git`
 
