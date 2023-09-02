@@ -1,27 +1,6 @@
 #include "json.h"
 #include <assert.h>
 #include <stdio.h>
-// alloc : ? *const fn(ctx
-//                     : *anyopaque, len
-//                     : usize, ptr_align
-//                     : u8, ret_addr
-//                     : usize)
-//         ? [*] u8,
-//         resize
-//         :
-//         ? *const fn(ctx
-//                     : *anyopaque, buf
-//                     : [] u8, buf_align
-//                     : u8, new_len
-//                     : usize, ret_addr
-//                     : usize) bool,
-//         free
-//         :
-//         ? *const fn(ctx
-//                     : *anyopaque, buf
-//                     : [] u8, buf_align
-//                     : u8, ret_addr
-//                     : usize) void
 
 enum jp_json_type {
   JsonBool = 0,
@@ -34,7 +13,7 @@ enum jp_json_type {
 };
 int main() {
   void *j = jp_parser_create(NULL, NULL, NULL, NULL);
-  void *res = jp_parser_parse(j, "[1, \"hello world\", true]");
+  void *res = jp_parser_parse(j, "[1.0, \"hello world\", true]");
   assert(JsonArray == jp_json_get_type(res));
   printf("arr length: %lu\n", jp_json_arr_len(res));
 
@@ -48,7 +27,7 @@ int main() {
 
   void *r2 = jp_json_arr_get(res, 2);
   assert(JsonBool == jp_json_get_type(r2));
-  printf("[2]: %i\n", *(int *)jp_json_get_data(r2));
+  printf("[2]: %s\n", *(int *)jp_json_get_data(r2) ? "true" : "false");
 
   jp_json_destroy(j, res);
   jp_parser_destroy(j);
