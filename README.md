@@ -1,7 +1,7 @@
 # jigson
 > :warning: ** This project in still in development and API is not stable. Use it at your own risk.
 
-## A JSON parser implemented with zig using [parser combinator][parser combinator] with C API
+## A JSON Parser Implemented with Zig Using [Parser Combinator][parser combinator] with C API
 This is a toy project for myself to experiment with parser combinator and a more or less functional programming style.
 > This is largely inspired by [Tsoding's][tsoding yt] [json parser][tsoding json repo] in `Haskell`
 
