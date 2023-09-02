@@ -10,7 +10,11 @@ This is a toy project for myself to experiment with parser combinator and a more
 
 `cd jigson`
 
-`zig build`
+`zig build`, which would generate:
+
+`zig-out/lib/libjson.so`
+`zig-out/bin/json`, a minimal working example for reading a file and parsing it into json
+`zig-out/bin/c_example`, a minimal working example for using the `src/c/json.h` header and linking with `libjson.so` in `C`
 
 To run tests,
 
@@ -22,11 +26,12 @@ To read a json file by supplying command line arguments,
 
 ## TODO
 
-- [ ] More comprehensive tests
-- [ ] Stable C API
-- [ ] Auto generating header with zig `-emit-h` option (currently not working)
+- [ ] Provide line and column number `xx:yy` when encountering an error
+- [x] More comprehensive tests
+- [x] Stable C API
+- [ ] Auto generating header with zig `-emit-h` option (currently manually created)
 - [ ] Benchmarking
-- [ ] Support for escape characters
+- [ ] Support for escape characters (e.g., `'\"'` in string)
 
 
 
