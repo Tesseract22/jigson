@@ -3,7 +3,7 @@
 
 ## A JSON parser implemented with zig using [parser combinator][parser combinator], providing C API (thus comptiable with languag comptiable with C)
 This is a toy project for myself to experiment with parser combinator and a more or less functional programming style.
-> This is largely inspired by Tsoding's json parser in [Haskell][tsoding yt]
+> This is largely inspired by [Tsoding's][tsoding yt] [json parser][tsoding json repo] in `Haskell`
 
 ## Installation & Build
 `git clone https://github.com/Tesseract22/jigson.git`
@@ -37,6 +37,6 @@ To read a json file by supplying command line arguments,
 
 
 
-
+[tsoding json repo]: https://github.com/tsoding/haskell-json/blob/bafd97d96b792edd3e170525a7944b9f01de7e34/Main.hs
 [tsoding yt]: https://www.youtube.com/watch?v=N9RUqGYuGfw
 [parser combinator]: https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjtxIWfoKSAAxVihVYBHWNJDGIQFnoECBMQAQ&url=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FParser_combinator&usg=AOvVaw26qPNFuVgdTXJPwnAXwjpG&opi=89978449
