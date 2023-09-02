@@ -16,26 +16,34 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const lib = b.addSharedLibrary(.{
-        .root_source_file = .{ .path = "src/json.zig" },
+        .root_source_file = .{ .path = "src/c.zig" },
         .name = "json",
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
     });
-
     // _ = lib;
     // lib.emit_h = true;
-    // const exe = b.addExecutable(.{
-    //     .name = "test",
-    // });
-    // exe.addIncludePath("/mnt/c/Users/caleb/PersonalCoding/ziglang/zig/lib");
-    // exe.addCSourceFile("test.c", &[_][]const u8{"-std=c99"});
-    // exe.linkLibrary(lib);
-    // exe.linkSystemLibrary("c");
-    // b.installArtifact(exe);
+    const exe = b.addExecutable(.{
+        .name = "json",
+        .root_source_file = .{ .path = "src/json.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    const c_example = b.addExecutable(.{
+        .name = "c_example",
+        .root_source_file = .{ .path = "src/c/main.c" },
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    c_example.linkLibrary(lib);
+    b.installArtifact(exe);
+    b.installArtifact(c_example);
+
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
-    // b.installArtifact(lib);
     b.installArtifact(lib);
 
     // Creates a step for unit testing. This only builds the test executable
