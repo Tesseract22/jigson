@@ -260,7 +260,7 @@ fn negIntParser(self: *Json, str: [*:0]const u8) ?Result(i64) {
 fn posFloatParser(self: *Json, str: [*:0]const u8) ?Result(f64) {
     _ = self;
     const isFloatStruct = struct {
-        var i: u8 = 0;
+        var i: u32 = 0;
         pub fn f(c: u8) bool {
             if (c == '.') {
                 i += 1;
@@ -269,6 +269,9 @@ fn posFloatParser(self: *Json, str: [*:0]const u8) ?Result(f64) {
             return c >= '0' and c <= '9';
         }
     };
+    // isFloatStruct is actually created as a global variable, so states would be perserved across functions called,
+    // we need to manually reset it.
+    defer isFloatStruct.i = 0;
     const isFloat = isFloatStruct.f;
     var i: u32 = 0;
     var c = str[0];
@@ -279,6 +282,7 @@ fn posFloatParser(self: *Json, str: [*:0]const u8) ?Result(f64) {
         i += 1;
         c = str[i];
     }
+    // std.debug.print("float parser: {} {}\n", .{ i, isFloatStruct.i });
     if (i == 0) return null;
     if (isFloatStruct.i == 0) {
         return null;
@@ -373,7 +377,7 @@ fn genLeftSpaceParser(comptime T: type) fn (p: Parser(T)) Parser(T) {
     }.f;
 }
 
-fn JarrayParser(self: *Json, str: [*:0]const u8) ?Result(JsonType) {
+pub fn JarrayParser(self: *Json, str: [*:0]const u8) ?Result(JsonType) {
     const sep = sepBy(JsonType, u8)(JsonParser, genCharParser(','));
     const left_brac = genRightSpaceParser(u8)(genCharParser('['));
     const right_brac = genRightSpaceParser(u8)(genCharParser(']'));
@@ -529,89 +533,132 @@ pub fn main() !void {
 //     }
 // }
 const expect = std.testing.expect;
+const expectStrings = std.testing.expectEqualStrings;
+var ta = std.testing.allocator;
 
-test "String Parser" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var gpa_allocator = gpa.allocator();
-    defer {
-        const status = gpa.deinit();
-        expect(status != .leak) catch @panic("memort leak");
-    }
-    var jp = Json.init(gpa_allocator);
-
-    var r1 = jp.JstringParser("\"this is correct\"");
-    if (r1) |*r| {
-        std.debug.print("\nresult: [{s}]\nremain:[{s}]\n", .{ r.result, r.remain });
-        r.deinit();
-    } else {
-        std.debug.print("null\n", .{});
-    }
-
-    var r2 = jp.JstringParser("\"this is wrong");
-    if (r2) |*r| {
-        std.debug.print("\nresult: [{s}]\nremain:[{s}]\n", .{ r.result, r.remain });
-        r.deinit();
+fn print_result(res: ?Result(JsonType)) void {
+    if (res) |r| {
+        std.debug.print("\nresult: |{s}|\nremain: |{s}|\n", .{ r.result, r.remain });
     } else {
         std.debug.print("null\n", .{});
     }
 }
+test "String Parser" {
+    var test_jp = Json.init(ta);
+    var r1 = test_jp.JstringParser("\"this is correct\"");
+    defer r1.?.deinit();
+    // expect(r1.?.result.JsonString == "this")
+    try expectStrings(r1.?.result.JsonString.items, "this is correct");
+
+    var r2 = test_jp.JstringParser("\"this is wrong");
+    try expect(r2 == null);
+}
 
 test "Object Parser" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var gpa_allocator = gpa.allocator();
-    defer {
-        const status = gpa.deinit();
-        expect(status != .leak) catch @panic("memort leak");
-    }
-    var jp = Json.init(gpa_allocator);
+    var test_jp = Json.init(ta);
+    var r1 = test_jp.JobjectParser("{\"key\":true, \"a\": 11}");
+    defer r1.?.deinit();
+    try switch (r1.?.result) {
+        .JsonObject => |obj| {
+            try expect(obj.items.len == 2);
+            try expectStrings(obj.items[0].first.JsonString.items, "key");
+            try expect(obj.items[0].second.JsonBool);
+            try expectStrings(obj.items[1].first.JsonString.items, "a");
+            try expect(obj.items[1].second.JsonInt == 11);
+        },
+        else => expect(false),
+    };
 
-    var r1 = jp.JobjectParser("{112:true}");
-    if (r1) |*r| {
-        std.debug.print("\nresult: [{s}]\nremain:[{s}]\n", .{ r.result, r.remain });
-        r.deinit();
-    } else {
-        std.debug.print("null\n", .{});
-    }
-
-    var r2 = jp.JobjectParser("{112: true, \n\"key\": [false], \n\"obj\": {}}");
+    var r2 = test_jp.JobjectParser("{\"nested\": {\"key\": -5.0}}");
     if (r2) |*r| {
-        std.debug.print("\nresult: [{s}]\nremain:[{s}]\n", .{ r.result, r.remain });
-        r.deinit();
+        defer r.deinit();
+        try switch (r.result) {
+            .JsonObject => |obj| {
+                try expect(obj.items.len == 1);
+                try expectStrings(obj.items[0].first.JsonString.items, "nested");
+                switch (obj.items[0].second) {
+                    .JsonObject => |in_obj| {
+                        try expect(in_obj.items.len == 1);
+                        try expectStrings(in_obj.items[0].first.JsonString.items, "key");
+                        try expect(in_obj.items[0].second.JsonFloat == -5.0);
+                    },
+                    else => try expect(false),
+                }
+            },
+            else => expect(false),
+        };
     } else {
-        std.debug.print("null\n", .{});
+        try expect(false);
     }
 }
 
 test "Array Parser" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var gpa_allocator = gpa.allocator();
-    defer {
-        const status = gpa.deinit();
-        expect(status != .leak) catch @panic("memort leak");
-    }
-    var jp = Json.init(gpa_allocator);
-    var r1 = jp.JsonParser("[11.5,22,true,[]]");
+    var test_jp = Json.init(ta);
+    var r1 = test_jp.JsonParser("[3.14, \"hello world\", true]");
     if (r1) |*r| {
-        std.debug.print("\nresult: [{s}]\nremain:[{s}]\n", .{ r.result, r.remain });
-        r.deinit();
+        defer r.deinit();
+        switch (r.result) {
+            .JsonArray => |arr| {
+                try expect(arr.items.len == 3);
+                try expect(arr.items[0].JsonFloat == 3.14);
+                try expectStrings(arr.items[1].JsonString.items, "hello world");
+                try expect(arr.items[2].JsonBool);
+            },
+            else => try expect(false),
+        }
     } else {
-        std.debug.print("null\n", .{});
+        try expect(false);
+    }
+
+    var r2 = test_jp.JsonParser("[[null],[]]");
+    if (r2) |*r| {
+        defer r.deinit();
+        switch (r.result) {
+            .JsonArray => |arr| {
+                try expect(arr.items.len == 2);
+                switch (arr.items[0]) {
+                    .JsonArray => |arr1| {
+                        try expect(arr1.items.len == 1);
+                        switch (arr1.items[0]) {
+                            .JsonNull => {},
+                            else => try expect(false),
+                        }
+                    },
+                    else => try expect(false),
+                }
+                switch (arr.items[1]) {
+                    .JsonArray => |arr2| {
+                        try expect(arr2.items.len == 0);
+                    },
+                    else => try expect(false),
+                }
+            },
+            else => try expect(false),
+        }
+    } else {
+        try expect(false);
     }
 }
-
-test "Float Parser" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var gpa_allocator = gpa.allocator();
-    defer {
-        const status = gpa.deinit();
-        expect(status != .leak) catch @panic("memort leak");
-    }
-    var jp = Json.init(gpa_allocator);
-    var r1 = jp.JsonParser("-1111223.2");
+fn test_float(str: [*:0]const u8, num: f64) bool {
+    var test_jp = Json.init(ta);
+    var r1 = test_jp.JsonParser(str);
     if (r1) |*r| {
-        std.debug.print("\nresult: [{s}]\nremain:[{s}]\n", .{ r.result, r.remain });
-        r.deinit();
-    } else {
-        std.debug.print("null\n", .{});
+        defer r.deinit();
+        return switch (r.result) {
+            .JsonFloat => |f| {
+                std.debug.print("Json({}) == Expected({})\n", .{ f, num });
+                return f == num;
+            },
+            else => false,
+        };
     }
+    return false;
+}
+test "Float Parser" {
+    std.debug.print("\n", .{});
+    try expect(test_float("3.1415926", 3.1415926));
+    try expect(test_float("-9.98", -9.98));
+    try expect(test_float(".5", 0.5));
+    try expect(test_float("32.", 32.0));
+    try expect(!test_float("1024", 1024.0));
 }
